@@ -1,0 +1,39 @@
+{
+  "scenario_id": "roadmap_mlops_save",
+  "description": "Student Priya asks the copilot to update month 3 of her MLOps roadmap with CI/CD content, incorporating knowledge base resources.",
+  "user_id": "usr_8a3f1b",
+  "roadmap_slug": "mlops-fundamentals",
+  "user_message": "I'm about to start month 3 on CI/CD for ML. Can you update my roadmap for month 3 with better goals and resources? I want to focus on GitHub Actions and CML. Please save the changes.",
+  "session_history": [
+    {
+      "role": "user",
+      "content": "Hi, I'm working through the MLOps fundamentals roadmap."
+    },
+    {
+      "role": "assistant",
+      "content": "Welcome back, Priya! I can see you're on the MLOps Fundamentals path. You've completed month 1 on Foundations and you're currently in month 2 covering Experiment Tracking. How can I help you today?"
+    },
+    {
+      "role": "user",
+      "content": "I want to look ahead to month 3 and make sure the plan is solid."
+    },
+    {
+      "role": "assistant",
+      "content": "Month 3 covers CI/CD for Machine Learning, including building CI pipelines with GitHub Actions, automating model validation, and implementing continuous training triggers. Would you like me to suggest any changes to the goals or resources?"
+    }
+  ],
+  "token_budget_per_model_call": 4096,
+  "max_steps": 10,
+  "expected_behavior": {
+    "tools_used": [
+      "get_user_profile",
+      "get_roadmap",
+      "search_kb",
+      "update_roadmap_month",
+      "finish"
+    ],
+    "roadmap_updated": true,
+    "month_updated": 3,
+    "confirmed": true
+  }
+}
