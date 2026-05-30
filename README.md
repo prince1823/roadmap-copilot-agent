@@ -42,7 +42,7 @@ Health check endpoint.
 |----------|-------------|---------|
 | `LLM_PROVIDER` | LLM provider name | `openrouter` |
 | `LLM_API_KEY` | API key for the LLM provider | *required* |
-| `LLM_MODEL` | Model identifier | `anthropic/claude-sonnet-4-20250514` |
+| `LLM_MODEL` | Model identifier | `openai/gpt-4o-mini` |
 | `PORT` | Server port | `3000` |
 
 ## Scripts
@@ -113,3 +113,14 @@ Tests cover:
 - **Context budget:** Priority-based eviction, token tracking, message ordering
 - **Guardrails:** `update_roadmap_month` blocked without `confirmed=true`
 - **Error paths:** LLM retry + fallback, timeout handling, invalid tool arguments
+
+## Bonus: Web UI
+
+As an extra, I built a web UI to interact with the agent visually. After starting the server, open `http://localhost:3000` in your browser.
+
+Features:
+- Chat interface to send messages to the copilot
+- Live agent step timeline showing each tool call and result
+- Run stats panel (status, steps taken, roadmap updated, model used)
+- Adjustable token budget and max steps settings
+- Session history carried across messages within a session

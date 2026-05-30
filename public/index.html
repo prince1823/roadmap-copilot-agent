@@ -37,9 +37,9 @@
     }
 
     .app {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 24px 32px;
     }
 
     /* ── Header ── */
@@ -112,12 +112,18 @@
     /* ── Layout ── */
     .main {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(380px, 1fr) minmax(380px, 1fr);
       gap: 24px;
     }
 
     @media (max-width: 900px) {
       .main { grid-template-columns: 1fr; }
+    }
+
+    .main > .card,
+    .main > .right-panel {
+      min-width: 0;
+      overflow: hidden;
     }
 
     /* ── Cards ── */
@@ -331,6 +337,11 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .steps-list {
+      overflow-x: hidden;
     }
 
     /* ── Stats ── */
