@@ -2,13 +2,14 @@ import { describe, it, expect, vi } from "vitest";
 import { runAgentLoop } from "../src/agent/loop.js";
 import type OpenAI from "openai";
 
-// ── Helper to create a mock OpenAI client ──
-
 function createMockClient(
-  responses: Array<{
-    message: Partial<OpenAI.Chat.Completions.ChatCompletionMessage>;
-    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-  } | Error>
+  responses: Array<
+    | {
+        message: Partial<OpenAI.Chat.Completions.ChatCompletionMessage>;
+        usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+      }
+    | Error
+  >
 ): OpenAI {
   let callIndex = 0;
 
@@ -17,12 +18,8 @@ function createMockClient(
       completions: {
         create: vi.fn(async () => {
           const response = responses[callIndex++];
-          if (!response) {
-            throw new Error("No more mock responses");
-          }
-          if (response instanceof Error) {
-            throw response;
-          }
+          if (!response) throw new Error("No more mock responses");
+          if (response instanceof Error) throw response;
           return {
             choices: [{ message: response.message }],
             usage: response.usage ?? {
@@ -37,7 +34,7 @@ function createMockClient(
   } as unknown as OpenAI;
 }
 
-describe("Agent error handling — invalid model output with retry and fallback", () => {
+describe("Invalid model output — retry with strict prompt and fallback", () => {
   it("should fall back after LLM repeatedly fails", async () => {
     const client = createMockClient([
       new Error("API rate limit exceeded"),
@@ -49,25 +46,25 @@ describe("Agent error handling — invalid model output with retry and fallback"
       model: "test-model",
       provider: "test",
       request: {
-        user_message: "Update my roadmap",
+        user_message: "Add MLOps to month 4",
         session_history: [],
-        token_budget_per_model_call: 4096,
-        max_steps: 5,
+        token_budget_per_model_call: 3500,
+        max_steps: 8,
       },
     });
 
     expect(result.success).toBe(false);
     expect(result.final_message).toContain("encountered an issue");
     expect(result.steps.length).toBeGreaterThan(0);
-    expect(result.steps.some((s) => s.action === "fallback")).toBe(true);
+    expect(result.steps.some((s) => s.action.type === "error")).toBe(true);
     expect(result.provider).toBe("test");
     expect(result.model).toBe("test-model");
+    expect(result.scenario_id).toBe("roadmap_mlops_save");
   });
 
   it("should recover after first LLM call fails but retry succeeds", async () => {
     const client = createMockClient([
       new Error("Temporary error"),
-      // Retry succeeds with a finish tool call
       {
         message: {
           role: "assistant",
@@ -79,8 +76,7 @@ describe("Agent error handling — invalid model output with retry and fallback"
               function: {
                 name: "finish",
                 arguments: JSON.stringify({
-                  final_message: "Recovered successfully!",
-                  roadmap_updated: false,
+                  message: "Recovered! Updated month 4 with MLOps and saved roadmap priya-ds-2026.",
                 }),
               },
             },
@@ -96,17 +92,17 @@ describe("Agent error handling — invalid model output with retry and fallback"
       request: {
         user_message: "Test retry",
         session_history: [],
-        token_budget_per_model_call: 4096,
-        max_steps: 5,
+        token_budget_per_model_call: 3500,
+        max_steps: 8,
       },
     });
 
     expect(result.success).toBe(true);
-    expect(result.final_message).toBe("Recovered successfully!");
+    expect(result.final_message).toContain("Recovered");
   });
 });
 
-describe("Agent error handling — timeout", () => {
+describe("Timeout handling — structured response, no crash", () => {
   it("should return structured error on timeout without crashing", async () => {
     const timeoutError = new Error("The operation was aborted");
     timeoutError.name = "AbortError";
@@ -120,30 +116,27 @@ describe("Agent error handling — timeout", () => {
       request: {
         user_message: "This will timeout",
         session_history: [],
-        token_budget_per_model_call: 4096,
-        max_steps: 5,
+        token_budget_per_model_call: 3500,
+        max_steps: 8,
       },
       timeoutMs: 100,
     });
 
     expect(result.success).toBe(false);
-    expect(result.final_message).toContain("encountered an issue");
-    expect(result.slug).toBeDefined();
+    expect(result.final_message).toBeDefined();
+    expect(result.slug).toBe("priya-ds-2026");
     expect(result.steps).toBeDefined();
-    expect(result.context_trace).toBeDefined();
+    expect(Array.isArray(result.steps)).toBe(true);
     expect(result.provider).toBe("test");
     expect(result.model).toBe("test-model");
-
-    // Verify it's a proper timeout step
-    const timeoutStep = result.steps.find((s) => s.action === "timeout");
-    expect(timeoutStep).toBeDefined();
+    expect(result.scenario_id).toBe("roadmap_mlops_save");
+    expect(result.mode).toBe("live");
   });
 });
 
-describe("Agent error handling — invalid tool arguments from model", () => {
-  it("should handle malformed JSON in tool arguments gracefully", async () => {
+describe("Malformed tool arguments from model", () => {
+  it("should handle invalid JSON in tool arguments and continue", async () => {
     const client = createMockClient([
-      // Model returns garbage JSON in tool args
       {
         message: {
           role: "assistant",
@@ -160,7 +153,6 @@ describe("Agent error handling — invalid tool arguments from model", () => {
           ],
         },
       },
-      // Then model recovers with finish
       {
         message: {
           role: "assistant",
@@ -172,8 +164,7 @@ describe("Agent error handling — invalid tool arguments from model", () => {
               function: {
                 name: "finish",
                 arguments: JSON.stringify({
-                  final_message: "Recovered from bad tool call",
-                  roadmap_updated: false,
+                  message: "Recovered from bad tool call. Updated month 4 with MLOps and saved roadmap priya-ds-2026.",
                 }),
               },
             },
@@ -189,17 +180,13 @@ describe("Agent error handling — invalid tool arguments from model", () => {
       request: {
         user_message: "Test bad args",
         session_history: [],
-        token_budget_per_model_call: 4096,
-        max_steps: 5,
+        token_budget_per_model_call: 3500,
+        max_steps: 8,
       },
     });
 
     expect(result.success).toBe(true);
-    expect(result.final_message).toBe("Recovered from bad tool call");
-    // First step should record the parse error
-    const errorStep = result.steps.find(
-      (s) => s.action === "tool_call_parse_error"
-    );
+    const errorStep = result.steps.find((s) => s.action.type === "error");
     expect(errorStep).toBeDefined();
   });
 });

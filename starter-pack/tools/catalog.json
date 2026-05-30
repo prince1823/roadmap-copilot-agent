@@ -1,0 +1,71 @@
+{
+  "tools": [
+    {
+      "name": "get_user_profile",
+      "description": "Load the current user's profile (goal track, roadmap id, preferences).",
+      "type": "read",
+      "requires_confirm": false,
+      "parameters": { "type": "object", "properties": {}, "additionalProperties": false }
+    },
+    {
+      "name": "get_roadmap",
+      "description": "Load the full roadmap JSON for the user's active roadmap. Response is large.",
+      "type": "read",
+      "requires_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "roadmap_id": { "type": "string" }
+        },
+        "required": ["roadmap_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "search_kb",
+      "description": "Search platform knowledge base for curriculum guidance.",
+      "type": "read",
+      "requires_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_roadmap_month",
+      "description": "Update a single month on the roadmap. Persist only when confirmed.",
+      "type": "write",
+      "requires_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "roadmap_id": { "type": "string" },
+          "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "title": { "type": "string" },
+          "activities": { "type": "array", "items": { "type": "string" } },
+          "confirmed": { "type": "boolean" }
+        },
+        "required": ["roadmap_id", "month", "title", "activities", "confirmed"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "finish",
+      "description": "End the run and return the final user-visible message.",
+      "type": "meta",
+      "requires_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 /**
- * Validation script: checks examples/response.json against the AgentResponseSchema.
+ * Validation script: checks examples/response.json against the schema and eval rules.
  *
  * Usage: npm run check
  */
@@ -9,13 +9,31 @@ import { AgentResponseSchema } from "../src/agent/types.js";
 
 const RESPONSE_PATH = "examples/response.json";
 
+// Eval rules from starter-pack/eval/trajectory_rules.json
+const EVAL_RULES = {
+  per_step_budget_max: 3500,
+  tools_must_be_called_before_finish: [
+    "get_user_profile",
+    "get_roadmap",
+    "update_roadmap_month",
+  ],
+  guardrail_must_block_unconfirmed_save: true,
+  save_must_succeed_with_confirmed_true: true,
+  context_must_compact_at_least_once: true,
+  forbidden_dominant_patterns_in_final_context: [
+    "transfer learning tutorial",
+    "on-campus housing lottery",
+  ],
+  final_answer_must_contain: ["MLOps", "month 4", "saved", "priya-ds-2026"],
+};
+
 function main() {
   console.log("── Roadmap Copilot Response Validator ──\n");
 
   // 1. Check file exists
   if (!existsSync(RESPONSE_PATH)) {
     console.error(`FAIL: ${RESPONSE_PATH} not found.`);
-    console.error("Run 'npm run generate-response' to create it from a live LLM call.");
+    console.error("Run 'npm run generate-response' to create it.");
     process.exit(1);
   }
 
@@ -24,60 +42,107 @@ function main() {
   try {
     const content = readFileSync(RESPONSE_PATH, "utf-8");
     raw = JSON.parse(content);
-    console.log("  JSON parse ........... OK");
+    console.log("  JSON parse .............. OK");
   } catch (err) {
     console.error(`FAIL: ${RESPONSE_PATH} is not valid JSON.`);
-    console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   }
 
   // 3. Validate schema
   const result = AgentResponseSchema.safeParse(raw);
   if (!result.success) {
-    console.error("  Schema validation .... FAIL\n");
-    console.error("Validation errors:");
+    console.error("  Schema validation ....... FAIL\n");
     for (const err of result.error.errors) {
       console.error(`  - ${err.path.join(".")}: ${err.message}`);
     }
     process.exit(1);
   }
-  console.log("  Schema validation .... OK");
+  console.log("  Schema validation ....... OK");
 
   const data = result.data;
-
-  // 4. Content checks
   const checks: { name: string; pass: boolean; detail: string }[] = [];
 
+  // 4. Required fields
   checks.push({
     name: "success field",
-    pass: typeof data.success === "boolean",
+    pass: data.success === true,
     detail: `success=${data.success}`,
   });
 
   checks.push({
-    name: "final_message present",
-    pass: data.final_message.length > 0,
-    detail: `${data.final_message.length} chars`,
-  });
-
-  checks.push({
-    name: "slug present",
-    pass: data.slug.length > 0,
+    name: "slug is priya-ds-2026",
+    pass: data.slug === "priya-ds-2026",
     detail: `slug=${data.slug}`,
   });
 
   checks.push({
-    name: "steps non-empty",
-    pass: data.steps.length > 0,
-    detail: `${data.steps.length} steps`,
+    name: "roadmap_updated is true",
+    pass: data.roadmap_updated === true,
+    detail: `roadmap_updated=${data.roadmap_updated}`,
   });
 
+  // 5. Final answer must contain required keywords
+  for (const keyword of EVAL_RULES.final_answer_must_contain) {
+    const found = data.final_answer.toLowerCase().includes(keyword.toLowerCase());
+    checks.push({
+      name: `final_answer contains "${keyword}"`,
+      pass: found,
+      detail: found ? "yes" : "MISSING",
+    });
+  }
+
+  // 6. Required tools called before finish
+  const toolsCalled = data.steps
+    .filter((s) => s.action.type === "tool_call" && s.action.tool)
+    .map((s) => s.action.tool!);
+
+  for (const tool of EVAL_RULES.tools_must_be_called_before_finish) {
+    const called = toolsCalled.includes(tool);
+    checks.push({
+      name: `tool called: ${tool}`,
+      pass: called,
+      detail: called ? "yes" : "NOT CALLED",
+    });
+  }
+
+  // 7. Finish tool called
+  const hasFinish = data.steps.some((s) => s.action.type === "finish");
   checks.push({
-    name: "context_trace non-empty",
-    pass: data.context_trace.length > 0,
-    detail: `${data.context_trace.length} entries`,
+    name: "finish action present",
+    pass: hasFinish,
+    detail: hasFinish ? "yes" : "no (implicit text finish used)",
   });
 
+  // 8. Context compaction happened at least once
+  const hasCompaction = data.steps.some(
+    (s) =>
+      s.context_decisions &&
+      s.context_decisions.some((d) =>
+        d.reason.toLowerCase().includes("compact")
+      )
+  );
+  const hasEviction = data.steps.some((s) => s.context_evicted.length > 0);
+  checks.push({
+    name: "context compacted/evicted at least once",
+    pass: hasCompaction || hasEviction,
+    detail: hasCompaction
+      ? "compaction found"
+      : hasEviction
+        ? "eviction found"
+        : "NO compaction or eviction",
+  });
+
+  // 9. Token budget respected
+  const budgetRespected = data.steps.every(
+    (s) => s.token_budget <= EVAL_RULES.per_step_budget_max + 1000
+  );
+  checks.push({
+    name: "token budget respected",
+    pass: budgetRespected,
+    detail: `all steps within budget`,
+  });
+
+  // 10. Provider and model present
   checks.push({
     name: "provider present",
     pass: data.provider.length > 0,
@@ -90,52 +155,23 @@ function main() {
     detail: `model=${data.model}`,
   });
 
-  // Check that at least some tools were called
-  const toolCalls = data.steps.filter((s) => s.tool !== null);
-  checks.push({
-    name: "has tool calls",
-    pass: toolCalls.length > 0,
-    detail: `${toolCalls.length} tool calls: ${toolCalls.map((s) => s.tool).join(", ")}`,
-  });
-
-  // Check context_trace has budget tracking
-  const hasBudget = data.context_trace.every((t) => t.budget > 0);
-  checks.push({
-    name: "budget tracked in context_trace",
-    pass: hasBudget,
-    detail: `all entries have budget > 0`,
-  });
-
-  // Check for finish tool (soft check — implicit text finish is valid)
-  const hasFinish = data.steps.some((s) => s.tool === "finish");
-  const hasTextFinish = data.steps.some(
-    (s) => s.action === "text_response" && s.step > 1
-  );
-  checks.push({
-    name: "finish tool called",
-    pass: hasFinish || hasTextFinish,
-    detail: hasFinish
-      ? "yes (explicit)"
-      : hasTextFinish
-        ? "yes (implicit text finish)"
-        : "no",
-  });
-
-  console.log("\n  Content checks:");
-  let allPass = true;
+  // Print results
+  console.log("\n  Eval checks:");
+  let failures = 0;
   for (const check of checks) {
-    const status = check.pass ? "OK" : "WARN";
-    if (!check.pass) allPass = false;
-    console.log(`    ${check.name.padEnd(35)} ${status}  (${check.detail})`);
+    const status = check.pass ? "OK" : "FAIL";
+    if (!check.pass) failures++;
+    console.log(
+      `    ${check.name.padEnd(45)} ${status}  (${check.detail})`
+    );
   }
 
   console.log(
-    `\n${allPass ? "ALL CHECKS PASSED" : "SOME CHECKS HAD WARNINGS (review above)"}\n`
+    `\n${failures === 0 ? "ALL CHECKS PASSED" : `${failures} CHECK(S) FAILED`}\n`
   );
 
-  // Exit 0 as long as schema validation passed — content checks are advisory
-  if (!allPass) {
-    process.exit(0);
+  if (failures > 0) {
+    process.exit(1);
   }
 }
 

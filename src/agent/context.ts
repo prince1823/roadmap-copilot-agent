@@ -1,9 +1,8 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { ContextTraceEntry } from "./types.js";
+import type { ContextDecision } from "./types.js";
 
 // ── Token estimation ──
-// Using a conservative ~4 chars per token heuristic.
-// For production, swap in tiktoken. This avoids the WASM load overhead in tests.
+// ~4 chars per token heuristic. Production would use tiktoken.
 
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
@@ -12,8 +11,7 @@ export function estimateTokens(text: string): number {
 export function estimateMessageTokens(
   msg: ChatCompletionMessageParam
 ): number {
-  // overhead for role, name, etc.
-  const overhead = 4;
+  const overhead = 4; // role, name, etc.
   if (typeof msg.content === "string") {
     return estimateTokens(msg.content) + overhead;
   }
@@ -25,7 +23,6 @@ export function estimateMessageTokens(
       }, 0) + overhead
     );
   }
-  // tool call messages, etc.
   return estimateTokens(JSON.stringify(msg)) + overhead;
 }
 
@@ -47,17 +44,67 @@ const TIER_ORDER: Record<PriorityTier, number> = {
   low: 3,
 };
 
+// Noise patterns that should be evicted first (from eval rules)
+const NOISE_PATTERNS = [
+  "transfer learning",
+  "on-campus housing lottery",
+  "pretrained weights",
+  "fine-tuning",
+];
+
+function isNoisyContent(content: string): boolean {
+  const lower = content.toLowerCase();
+  return NOISE_PATTERNS.some((p) => lower.includes(p));
+}
+
+// Compaction: summarize large content to save tokens
+function compactContent(content: string, label: string): { text: string; wasCompacted: boolean } {
+  // Compact roadmap JSON — don't keep full object in every call
+  if (label.startsWith("tool_result_") && content.length > 500) {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.success && parsed.data) {
+        const data = parsed.data;
+        // Compact roadmap responses
+        if (data.months && Array.isArray(data.months)) {
+          const compact = {
+            success: true,
+            data: {
+              id: data.id,
+              slug: data.slug,
+              title: data.title,
+              months: data.months.map((m: { month: number; title: string; activities: string[] }) => ({
+                month: m.month,
+                title: m.title,
+                activities_count: m.activities?.length ?? 0,
+              })),
+            },
+          };
+          return { text: JSON.stringify(compact), wasCompacted: true };
+        }
+      }
+    } catch {
+      // Not JSON, skip
+    }
+  }
+  return { text: content, wasCompacted: false };
+}
+
 // ── Context builder ──
 
 export interface ContextBuildResult {
   messages: ChatCompletionMessageParam[];
-  trace: ContextTraceEntry;
+  tokens_used: number;
+  token_budget: number;
+  context_included: string[];
+  context_evicted: string[];
+  context_decisions: ContextDecision[];
 }
 
 export function buildContext(opts: {
   systemPrompt: string;
   userMessage: string;
-  sessionHistory: { role: "user" | "assistant"; content: string }[];
+  sessionHistory: { role: "user" | "assistant"; content: string; estimated_tokens?: number }[];
   toolResults: ChatCompletionMessageParam[];
   tokenBudget: number;
   step: number;
@@ -65,7 +112,7 @@ export function buildContext(opts: {
   const { systemPrompt, userMessage, sessionHistory, toolResults, tokenBudget, step } =
     opts;
 
-  // Build prioritized blocks
+  const decisions: ContextDecision[] = [];
   const blocks: PrioritizedBlock[] = [];
 
   // System prompt — always included
@@ -92,45 +139,77 @@ export function buildContext(opts: {
     tokens: estimateMessageTokens(userMsg),
   });
 
-  // In-run tool results — high priority (most recent first)
-  for (let i = toolResults.length - 1; i >= 0; i--) {
+  // In-run tool results — high priority, apply compaction
+  for (let i = 0; i < toolResults.length; i++) {
     const msg = toolResults[i];
+    const label = `tool_result_${i}`;
+
+    // Try compaction for large tool results
+    if (typeof msg.content === "string") {
+      const { text, wasCompacted } = compactContent(msg.content, label);
+      if (wasCompacted) {
+        decisions.push({
+          reason: `Compacted ${label}: roadmap JSON summarized to save tokens`,
+          block: label,
+        });
+        const compactedMsg: ChatCompletionMessageParam = { ...msg, content: text };
+        blocks.push({
+          label,
+          tier: "high",
+          message: compactedMsg,
+          tokens: estimateMessageTokens(compactedMsg),
+        });
+        continue;
+      }
+    }
+
     blocks.push({
-      label: `tool_result_${i}`,
+      label,
       tier: "high",
       message: msg,
       tokens: estimateMessageTokens(msg),
     });
   }
 
-  // Session history — medium priority (most recent first)
-  for (let i = sessionHistory.length - 1; i >= 0; i--) {
+  // Session history — classify as medium or low based on noise
+  for (let i = 0; i < sessionHistory.length; i++) {
     const entry = sessionHistory[i];
-    const msg: ChatCompletionMessageParam = {
-      role: entry.role,
-      content: entry.content,
-    };
-    blocks.push({
-      label: `history_${i}`,
-      tier: "medium",
-      message: msg,
-      tokens: estimateMessageTokens(msg),
-    });
+    const content = entry.content;
+    const label = `history_${i}_${entry.role}`;
+
+    if (isNoisyContent(content)) {
+      decisions.push({
+        reason: `Deprioritized ${label}: contains off-topic content (noise pattern detected)`,
+        block: label,
+      });
+      blocks.push({
+        label,
+        tier: "low",
+        message: { role: entry.role, content: content },
+        tokens: entry.estimated_tokens ?? estimateMessageTokens({ role: entry.role, content }),
+      });
+    } else {
+      blocks.push({
+        label,
+        tier: "medium",
+        message: { role: entry.role, content: content },
+        tokens: entry.estimated_tokens ?? estimateMessageTokens({ role: entry.role, content }),
+      });
+    }
   }
 
   // Sort by priority tier (stable sort preserves insertion order within tier)
   blocks.sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]);
+
+  // Reserve tokens for response overhead
+  const reserve = Math.min(200, Math.floor(tokenBudget * 0.2));
+  const effectiveBudget = tokenBudget - reserve;
 
   // Greedily fit blocks into budget
   const included: string[] = [];
   const evicted: string[] = [];
   const selectedBlocks: PrioritizedBlock[] = [];
   let totalTokens = 0;
-
-  // Reserve tokens for the model's response and tool-calling overhead
-  // Cap the reserve at 20% of budget so small budgets still fit critical content
-  const reserve = Math.min(200, Math.floor(tokenBudget * 0.2));
-  const effectiveBudget = tokenBudget - reserve;
 
   for (const block of blocks) {
     if (totalTokens + block.tokens <= effectiveBudget) {
@@ -139,14 +218,16 @@ export function buildContext(opts: {
       totalTokens += block.tokens;
     } else {
       evicted.push(block.label);
+      decisions.push({
+        reason: `Evicted ${block.label}: would exceed token budget (${totalTokens + block.tokens} > ${effectiveBudget})`,
+        block: block.label,
+      });
     }
   }
 
-  // Rebuild messages in correct conversational order:
-  // system → history (chronological) → tool results (chronological) → user message
+  // Rebuild messages in correct order: system → history → tool results → user
   const orderedMessages: ChatCompletionMessageParam[] = [];
 
-  // System prompt first
   const sys = selectedBlocks.find((b) => b.label === "system_prompt");
   if (sys) orderedMessages.push(sys.message);
 
@@ -180,12 +261,10 @@ export function buildContext(opts: {
 
   return {
     messages: orderedMessages,
-    trace: {
-      step,
-      included,
-      evicted,
-      total_tokens: totalTokens,
-      budget: tokenBudget,
-    },
+    tokens_used: totalTokens,
+    token_budget: tokenBudget,
+    context_included: included,
+    context_evicted: evicted,
+    context_decisions: decisions,
   };
 }

@@ -1,39 +1,41 @@
 {
   "scenario_id": "roadmap_mlops_save",
-  "description": "Student Priya asks the copilot to update month 3 of her MLOps roadmap with CI/CD content, incorporating knowledge base resources.",
-  "user_id": "usr_8a3f1b",
-  "roadmap_slug": "mlops-fundamentals",
-  "user_message": "I'm about to start month 3 on CI/CD for ML. Can you update my roadmap for month 3 with better goals and resources? I want to focus on GitHub Actions and CML. Please save the changes.",
+  "surface": "copilot",
+  "page": "roadmap",
+  "user_message": "Add MLOps to month 4 of my data science roadmap and save it.",
+  "token_budget_per_model_call": 3500,
+  "max_steps": 8,
   "session_history": [
     {
       "role": "user",
-      "content": "Hi, I'm working through the MLOps fundamentals roadmap."
+      "estimated_tokens": 30,
+      "content": "Help me build a data science roadmap."
     },
     {
       "role": "assistant",
-      "content": "Welcome back, Priya! I can see you're on the MLOps Fundamentals path. You've completed month 1 on Foundations and you're currently in month 2 covering Experiment Tracking. How can I help you today?"
+      "estimated_tokens": 40,
+      "content": "I'll use your profile and create a six-month plan."
     },
     {
       "role": "user",
-      "content": "I want to look ahead to month 3 and make sure the plan is solid."
+      "estimated_tokens": 25,
+      "content": "What is transfer learning?"
     },
     {
       "role": "assistant",
-      "content": "Month 3 covers CI/CD for Machine Learning, including building CI pipelines with GitHub Actions, automating model validation, and implementing continuous training triggers. Would you like me to suggest any changes to the goals or resources?"
+      "estimated_tokens": 480,
+      "content": "Transfer learning is a machine learning technique where a model developed for one task is reused as the starting point for a model on a second task. It includes fine-tuning pretrained networks, using ImageNet weights, domain adaptation, and semi-supervised approaches. (Long tutorial text — noise for the current save request.)"
+    },
+    {
+      "role": "user",
+      "estimated_tokens": 35,
+      "content": "Show me month 3 topics."
+    },
+    {
+      "role": "assistant",
+      "estimated_tokens": 90,
+      "content": "Month 3 covers regression, classification, and model evaluation."
     }
   ],
-  "token_budget_per_model_call": 4096,
-  "max_steps": 10,
-  "expected_behavior": {
-    "tools_used": [
-      "get_user_profile",
-      "get_roadmap",
-      "search_kb",
-      "update_roadmap_month",
-      "finish"
-    ],
-    "roadmap_updated": true,
-    "month_updated": 3,
-    "confirmed": true
-  }
+  "required_final_answer_contains": ["MLOps", "month 4", "saved", "priya-ds-2026"]
 }

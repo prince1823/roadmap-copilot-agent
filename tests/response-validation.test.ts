@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "fs";
 import { AgentResponseSchema } from "../src/agent/types.js";
 
-describe("Response validation — examples/response.json", () => {
+describe("Valid live run — examples/response.json", () => {
   const RESPONSE_PATH = "examples/response.json";
 
   it("should exist on disk", () => {
@@ -23,35 +23,49 @@ describe("Response validation — examples/response.json", () => {
     expect(result.success).toBe(true);
   });
 
-  it("should contain required fields with valid values", () => {
+  it("should contain all required response fields", () => {
     const data = AgentResponseSchema.parse(
       JSON.parse(readFileSync(RESPONSE_PATH, "utf-8"))
     );
+    expect(data.scenario_id).toBe("roadmap_mlops_save");
+    expect(data.mode).toBe("live");
     expect(typeof data.success).toBe("boolean");
+    expect(data.final_answer.length).toBeGreaterThan(0);
     expect(data.final_message.length).toBeGreaterThan(0);
-    expect(data.slug.length).toBeGreaterThan(0);
+    expect(data.slug).toBe("priya-ds-2026");
     expect(data.steps.length).toBeGreaterThan(0);
-    expect(data.context_trace.length).toBeGreaterThan(0);
     expect(data.provider.length).toBeGreaterThan(0);
     expect(data.model.length).toBeGreaterThan(0);
   });
 
-  it("should include tool calls in steps", () => {
+  it("should include tool actions in steps", () => {
     const data = AgentResponseSchema.parse(
       JSON.parse(readFileSync(RESPONSE_PATH, "utf-8"))
     );
-    const toolCalls = data.steps.filter((s) => s.tool !== null);
-    expect(toolCalls.length).toBeGreaterThan(0);
+    const toolActions = data.steps.filter(
+      (s) => s.action.tool !== undefined
+    );
+    expect(toolActions.length).toBeGreaterThan(0);
   });
 
-  it("should track token budget in context_trace", () => {
+  it("should track token budget in every step", () => {
     const data = AgentResponseSchema.parse(
       JSON.parse(readFileSync(RESPONSE_PATH, "utf-8"))
     );
-    for (const entry of data.context_trace) {
-      expect(entry.budget).toBeGreaterThan(0);
-      expect(entry.total_tokens).toBeGreaterThan(0);
-      expect(entry.total_tokens).toBeLessThanOrEqual(entry.budget);
+    for (const step of data.steps) {
+      expect(step.token_budget).toBeGreaterThan(0);
+      expect(step.tokens_used).toBeGreaterThanOrEqual(0);
+      expect(step.context_included.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("should have context_included and context_evicted arrays in steps", () => {
+    const data = AgentResponseSchema.parse(
+      JSON.parse(readFileSync(RESPONSE_PATH, "utf-8"))
+    );
+    for (const step of data.steps) {
+      expect(Array.isArray(step.context_included)).toBe(true);
+      expect(Array.isArray(step.context_evicted)).toBe(true);
     }
   });
 });

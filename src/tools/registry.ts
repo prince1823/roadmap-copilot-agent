@@ -10,7 +10,7 @@ import {
 import {
   MOCK_USER_PROFILE,
   MOCK_ROADMAP,
-  MOCK_KB_ARTICLES,
+  MOCK_KB_CHUNKS,
 } from "../mock/data.js";
 
 // ── Tool result type ──
@@ -37,18 +37,15 @@ export function wasRoadmapUpdated(): boolean {
 
 // ── Tool implementations ──
 
-function getUserProfile(args: z.infer<typeof GetUserProfileArgs>): ToolResult {
-  if (args.user_id !== MOCK_USER_PROFILE.user_id) {
-    return { success: false, error: `User not found: ${args.user_id}` };
-  }
+function getUserProfile(_args: z.infer<typeof GetUserProfileArgs>): ToolResult {
   return { success: true, data: MOCK_USER_PROFILE };
 }
 
 function getRoadmap(args: z.infer<typeof GetRoadmapArgs>): ToolResult {
-  if (args.user_id !== MOCK_ROADMAP.user_id || args.slug !== MOCK_ROADMAP.slug) {
+  if (args.roadmap_id !== MOCK_ROADMAP.id) {
     return {
       success: false,
-      error: `Roadmap not found for user=${args.user_id}, slug=${args.slug}`,
+      error: `Roadmap not found: ${args.roadmap_id}`,
     };
   }
   return { success: true, data: updatedRoadmap };
@@ -56,21 +53,25 @@ function getRoadmap(args: z.infer<typeof GetRoadmapArgs>): ToolResult {
 
 function searchKb(args: z.infer<typeof SearchKbArgs>): ToolResult {
   const query = args.query.toLowerCase();
-  const scored = MOCK_KB_ARTICLES.map((article) => {
-    let score = article.relevance_score;
-    const titleMatch = article.title.toLowerCase().includes(query);
-    const contentMatch = article.content.toLowerCase().includes(query);
-    const tagMatch = article.tags.some((t) => query.includes(t));
-    if (titleMatch) score += 0.3;
-    if (contentMatch) score += 0.2;
-    if (tagMatch) score += 0.15;
-    return { ...article, computed_score: Math.min(score, 1.0) };
-  });
+  const results = MOCK_KB_CHUNKS.filter((chunk) =>
+    chunk.keywords.some((kw) => query.includes(kw.toLowerCase()))
+  );
 
-  scored.sort((a, b) => b.computed_score - a.computed_score);
-  const results = scored.slice(0, args.top_k);
+  if (results.length === 0) {
+    // Fallback: return all chunks ranked by keyword overlap
+    const scored = MOCK_KB_CHUNKS.map((chunk) => {
+      const score = chunk.keywords.filter((kw) =>
+        query.split(/\s+/).some((w) => kw.toLowerCase().includes(w))
+      ).length;
+      return { ...chunk, score };
+    })
+      .filter((c) => c.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-  return { success: true, data: { query: args.query, results } };
+    return { success: true, data: scored.length > 0 ? scored : MOCK_KB_CHUNKS };
+  }
+
+  return { success: true, data: results };
 }
 
 function updateRoadmapMonth(
@@ -87,10 +88,10 @@ function updateRoadmapMonth(
     };
   }
 
-  if (args.user_id !== MOCK_ROADMAP.user_id || args.slug !== MOCK_ROADMAP.slug) {
+  if (args.roadmap_id !== MOCK_ROADMAP.id) {
     return {
       success: false,
-      error: `Roadmap not found for user=${args.user_id}, slug=${args.slug}`,
+      error: `Roadmap not found: ${args.roadmap_id}`,
     };
   }
 
@@ -98,12 +99,12 @@ function updateRoadmapMonth(
   if (!monthEntry) {
     return {
       success: false,
-      error: `Month ${args.month} not found in roadmap (valid: 1-${updatedRoadmap.total_months})`,
+      error: `Month ${args.month} not found in roadmap (valid: 1-${updatedRoadmap.months.length})`,
     };
   }
 
-  monthEntry.goals = args.goals;
-  monthEntry.resources = args.resources;
+  monthEntry.title = args.title;
+  monthEntry.activities = args.activities;
   roadmapUpdated = true;
 
   return {
@@ -119,8 +120,7 @@ function finish(args: z.infer<typeof FinishArgs>): ToolResult {
   return {
     success: true,
     data: {
-      final_message: args.final_message,
-      roadmap_updated: args.roadmap_updated,
+      message: args.message,
     },
   };
 }
@@ -163,7 +163,7 @@ export function executeTool(name: string, rawArgs: unknown): ToolResult {
   return handler(parsed.data);
 }
 
-// ── OpenAI-format tool definitions for the LLM ──
+// ── OpenAI-format tool definitions for the LLM (from starter-pack catalog) ──
 
 export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
   {
@@ -171,13 +171,10 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
     function: {
       name: "get_user_profile",
       description:
-        "Retrieve the student's profile including name, enrollment, interests, and completed courses.",
+        "Load the current user's profile (goal track, roadmap id, preferences).",
       parameters: {
         type: "object",
-        required: ["user_id"],
-        properties: {
-          user_id: { type: "string", description: "The student's user ID" },
-        },
+        properties: {},
         additionalProperties: false,
       },
     },
@@ -187,13 +184,12 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
     function: {
       name: "get_roadmap",
       description:
-        "Retrieve the student's learning roadmap by slug. Returns all months with goals, resources, and status.",
+        "Load the full roadmap JSON for the user's active roadmap. Response is large.",
       parameters: {
         type: "object",
-        required: ["user_id", "slug"],
+        required: ["roadmap_id"],
         properties: {
-          user_id: { type: "string", description: "The student's user ID" },
-          slug: { type: "string", description: "The roadmap slug identifier" },
+          roadmap_id: { type: "string" },
         },
         additionalProperties: false,
       },
@@ -204,19 +200,12 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
     function: {
       name: "search_kb",
       description:
-        "Search the knowledge base for articles related to a query. Returns ranked results with titles and content.",
+        "Search platform knowledge base for curriculum guidance.",
       parameters: {
         type: "object",
         required: ["query"],
         properties: {
-          query: {
-            type: "string",
-            description: "Search query for knowledge base articles",
-          },
-          top_k: {
-            type: "number",
-            description: "Number of results to return (1-10, default 3)",
-          },
+          query: { type: "string" },
         },
         additionalProperties: false,
       },
@@ -227,28 +216,22 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
     function: {
       name: "update_roadmap_month",
       description:
-        "Update goals and resources for a specific month in the student's roadmap. IMPORTANT: requires confirmed=true or the call will be rejected.",
+        "Update a single month on the roadmap. Persist only when confirmed is true. If confirmed is false the call will be rejected with a guardrail error.",
       parameters: {
         type: "object",
-        required: ["user_id", "slug", "month", "goals", "resources", "confirmed"],
+        required: ["roadmap_id", "month", "title", "activities", "confirmed"],
         properties: {
-          user_id: { type: "string", description: "The student's user ID" },
-          slug: { type: "string", description: "The roadmap slug identifier" },
-          month: { type: "number", description: "Month number to update (1-based)" },
-          goals: {
+          roadmap_id: { type: "string" },
+          month: { type: "integer", minimum: 1, maximum: 12 },
+          title: { type: "string" },
+          activities: {
             type: "array",
             items: { type: "string" },
-            description: "Updated list of goals for this month",
-          },
-          resources: {
-            type: "array",
-            items: { type: "string" },
-            description: "Updated list of resources for this month",
           },
           confirmed: {
             type: "boolean",
             description:
-              "Must be true to execute the update. If the user has not confirmed, set to false and the tool will return an error prompting confirmation.",
+              "Must be true to persist the update. The user saying 'save it' counts as confirmation.",
           },
         },
         additionalProperties: false,
@@ -260,19 +243,12 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
     function: {
       name: "finish",
       description:
-        "Signal that the agent is done. Provide the final message to the user and whether the roadmap was updated.",
+        "End the run and return the final user-visible message. Include what changed and the roadmap slug.",
       parameters: {
         type: "object",
-        required: ["final_message", "roadmap_updated"],
+        required: ["message"],
         properties: {
-          final_message: {
-            type: "string",
-            description: "The final response message to send to the student",
-          },
-          roadmap_updated: {
-            type: "boolean",
-            description: "Whether the roadmap was modified during this session",
-          },
+          message: { type: "string" },
         },
         additionalProperties: false,
       },

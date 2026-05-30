@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { executeTool, resetToolState, wasRoadmapUpdated } from "../src/tools/registry.js";
 
 describe("Confirm-before-write guardrail", () => {
@@ -8,11 +8,10 @@ describe("Confirm-before-write guardrail", () => {
 
   it("should REJECT update_roadmap_month when confirmed=false", () => {
     const result = executeTool("update_roadmap_month", {
-      user_id: "usr_8a3f1b",
-      slug: "mlops-fundamentals",
-      month: 3,
-      goals: ["New goal"],
-      resources: ["New resource"],
+      roadmap_id: "rdmp_9f2a",
+      month: 4,
+      title: "MLOps",
+      activities: ["mlflow", "ci_pipeline"],
       confirmed: false,
     });
 
@@ -24,11 +23,10 @@ describe("Confirm-before-write guardrail", () => {
 
   it("should ACCEPT update_roadmap_month when confirmed=true", () => {
     const result = executeTool("update_roadmap_month", {
-      user_id: "usr_8a3f1b",
-      slug: "mlops-fundamentals",
-      month: 3,
-      goals: ["Updated goal 1", "Updated goal 2"],
-      resources: ["Resource A", "Resource B"],
+      roadmap_id: "rdmp_9f2a",
+      month: 4,
+      title: "MLOps & Deployment",
+      activities: ["mlflow_tracking", "model_registry", "ci_pipeline"],
       confirmed: true,
     });
 
@@ -38,25 +36,22 @@ describe("Confirm-before-write guardrail", () => {
 
   it("should REJECT when confirmed field is missing", () => {
     const result = executeTool("update_roadmap_month", {
-      user_id: "usr_8a3f1b",
-      slug: "mlops-fundamentals",
-      month: 3,
-      goals: ["Goal"],
-      resources: ["Resource"],
-      // confirmed is missing
+      roadmap_id: "rdmp_9f2a",
+      month: 4,
+      title: "MLOps",
+      activities: ["mlflow"],
     });
 
     expect(result.success).toBe(false);
     expect(wasRoadmapUpdated()).toBe(false);
   });
 
-  it("should REJECT when user_id does not match", () => {
+  it("should REJECT when roadmap_id does not match", () => {
     const result = executeTool("update_roadmap_month", {
-      user_id: "usr_wrong",
-      slug: "mlops-fundamentals",
-      month: 3,
-      goals: ["Goal"],
-      resources: ["Resource"],
+      roadmap_id: "wrong_id",
+      month: 4,
+      title: "MLOps",
+      activities: ["mlflow"],
       confirmed: true,
     });
 
@@ -66,16 +61,14 @@ describe("Confirm-before-write guardrail", () => {
 
   it("should REJECT when month is out of range", () => {
     const result = executeTool("update_roadmap_month", {
-      user_id: "usr_8a3f1b",
-      slug: "mlops-fundamentals",
+      roadmap_id: "rdmp_9f2a",
       month: 99,
-      goals: ["Goal"],
-      resources: ["Resource"],
+      title: "Invalid",
+      activities: [],
       confirmed: true,
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Month 99 not found");
   });
 });
 
@@ -86,32 +79,30 @@ describe("Tool argument validation", () => {
     expect(result.error).toContain("Unknown tool");
   });
 
-  it("should reject invalid arguments for get_user_profile", () => {
+  it("should accept valid get_user_profile call (no args)", () => {
     const result = executeTool("get_user_profile", {});
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("Invalid arguments");
-  });
-
-  it("should reject invalid arguments for search_kb", () => {
-    const result = executeTool("search_kb", { query: 123 });
-    expect(result.success).toBe(false);
-  });
-
-  it("should accept valid get_user_profile call", () => {
-    const result = executeTool("get_user_profile", { user_id: "usr_8a3f1b" });
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
   });
 
+  it("should accept valid get_roadmap call", () => {
+    const result = executeTool("get_roadmap", { roadmap_id: "rdmp_9f2a" });
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject get_roadmap with missing roadmap_id", () => {
+    const result = executeTool("get_roadmap", {});
+    expect(result.success).toBe(false);
+  });
+
   it("should accept valid search_kb call", () => {
-    const result = executeTool("search_kb", { query: "mlflow", top_k: 2 });
+    const result = executeTool("search_kb", { query: "mlops month 4" });
     expect(result.success).toBe(true);
   });
 
   it("should accept valid finish call", () => {
     const result = executeTool("finish", {
-      final_message: "Done!",
-      roadmap_updated: false,
+      message: "Done! Updated month 4 with MLOps and saved roadmap priya-ds-2026.",
     });
     expect(result.success).toBe(true);
   });

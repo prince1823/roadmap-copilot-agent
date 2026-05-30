@@ -1,23 +1,31 @@
 {
-  "user_message": "I'm about to start month 3 on CI/CD for ML. Can you update my roadmap for month 3 with better goals and resources? I want to focus on GitHub Actions and CML. Please save the changes.",
+  "user_message": "Add MLOps to month 4 of my data science roadmap and save it.",
+  "token_budget_per_model_call": 3500,
+  "max_steps": 8,
   "session_history": [
     {
       "role": "user",
-      "content": "Hi, I'm working through the MLOps fundamentals roadmap."
+      "content": "Help me build a data science roadmap."
     },
     {
       "role": "assistant",
-      "content": "Welcome back, Priya! I can see you're on the MLOps Fundamentals path. You've completed month 1 on Foundations and you're currently in month 2 covering Experiment Tracking. How can I help you today?"
+      "content": "I'll use your profile and create a six-month plan."
     },
     {
       "role": "user",
-      "content": "I want to look ahead to month 3 and make sure the plan is solid."
+      "content": "What is transfer learning?"
     },
     {
       "role": "assistant",
-      "content": "Month 3 covers CI/CD for Machine Learning, including building CI pipelines with GitHub Actions, automating model validation, and implementing continuous training triggers. Would you like me to suggest any changes to the goals or resources?"
+      "content": "Transfer learning is a machine learning technique where a model developed for one task is reused as the starting point for a model on a second task. (Long off-topic tutorial — should be evicted or compressed by your context policy.)"
+    },
+    {
+      "role": "user",
+      "content": "Show me month 3 topics."
+    },
+    {
+      "role": "assistant",
+      "content": "Month 3 covers regression, classification, and model evaluation."
     }
-  ],
-  "token_budget_per_model_call": 4096,
-  "max_steps": 10
+  ]
 }

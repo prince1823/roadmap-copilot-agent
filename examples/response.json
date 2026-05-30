@@ -1,166 +1,220 @@
 {
+  "scenario_id": "roadmap_mlops_save",
+  "mode": "live",
   "success": true,
-  "final_message": "I've updated your roadmap for month 3 on CI/CD for Machine Learning with enhanced goals and resources. Here are the changes:\n\n### Updated Month 3 Goals:\n- Build a CI pipeline for model training with GitHub Actions\n- Automate model validation and testing\n- Implement continuous training triggers using CML\n- Create a workflow YAML for model deployment\n\n### Updated Resources:\n- GitHub Actions ML workflow templates\n- CML by Iterative.ai documentation\n- CI/CD Pipelines for ML with GitHub Actions article\n- Weights & Biases vs MLflow Comparison\n- Getting Started with MLflow Tracking\n\nYour roadmap has been successfully updated! If you need anything else, feel free to ask.",
+  "final_answer": "MLOps added to month 4 of your data science roadmap and saved. The updated activities include: Experiment tracking with MLflow, Model registry basics, CI for training pipelines, and Deploy to staging. The roadmap slug is priya-ds-2026.",
+  "final_message": "MLOps added to month 4 of your data science roadmap and saved. The updated activities include: Experiment tracking with MLflow, Model registry basics, CI for training pipelines, and Deploy to staging. The roadmap slug is priya-ds-2026.",
   "roadmap_updated": true,
-  "slug": "mlops-fundamentals",
+  "slug": "priya-ds-2026",
   "steps": [
     {
-      "step": 1,
-      "action": "tool_call",
-      "tool": "get_user_profile",
-      "tool_args": {
-        "user_id": "usr_8a3f1b"
-      },
-      "result_summary": "Success: {\"user_id\":\"usr_8a3f1b\",\"name\":\"Priya Sharma\",\"email\":\"priya.sharma@university.edu\",\"role\":\"student\",\"enrollment\":\"MS Computer Science\",\"interests\":[\"...",
-      "tokens_used": 942
-    },
-    {
-      "step": 2,
-      "action": "tool_call",
-      "tool": "get_roadmap",
-      "tool_args": {
-        "user_id": "usr_8a3f1b",
-        "slug": "mlops-fundamentals"
-      },
-      "result_summary": "Success: {\"slug\":\"mlops-fundamentals\",\"title\":\"MLOps Fundamentals Learning Path\",\"user_id\":\"usr_8a3f1b\",\"total_months\":6,\"months\":[{\"month\":1,\"title\":\"Foundati...",
-      "tokens_used": 1077
-    },
-    {
-      "step": 3,
-      "action": "tool_call",
-      "tool": "search_kb",
-      "tool_args": {
-        "query": "GitHub Actions CML for ML",
-        "top_k": 5
-      },
-      "result_summary": "Success: {\"query\":\"GitHub Actions CML for ML\",\"results\":[{\"id\":\"kb_001\",\"title\":\"Getting Started with MLflow Tracking\",\"content\":\"MLflow Tracking lets you log ...",
-      "tokens_used": 1607
-    },
-    {
-      "step": 4,
-      "action": "tool_call",
-      "tool": "update_roadmap_month",
-      "tool_args": {
-        "user_id": "usr_8a3f1b",
-        "slug": "mlops-fundamentals",
-        "month": 3,
-        "goals": [
-          "Build a CI pipeline for model training with GitHub Actions",
-          "Automate model validation and testing",
-          "Implement continuous training triggers using CML",
-          "Create a workflow YAML for model deployment"
-        ],
-        "resources": [
-          "GitHub Actions ML workflow templates",
-          "CML by Iterative.ai documentation",
-          "CI/CD Pipelines for ML with GitHub Actions article",
-          "Weights & Biases vs MLflow Comparison",
-          "Getting Started with MLflow Tracking"
-        ],
-        "confirmed": true
-      },
-      "result_summary": "Success: {\"message\":\"Month 3 updated successfully\",\"updated_month\":{\"month\":3,\"title\":\"CI/CD for Machine Learning\",\"goals\":[\"Build a CI pipeline for model trai...",
-      "tokens_used": 2311
-    },
-    {
-      "step": 5,
-      "action": "text_response",
-      "tool": null,
-      "tool_args": null,
-      "result_summary": "I've updated your roadmap for month 3 on CI/CD for Machine Learning with enhanced goals and resources. Here are the changes:\n\n### Updated Month 3 Goals:\n- Build a CI pipeline for model training with G",
-      "tokens_used": 2586
-    }
-  ],
-  "context_trace": [
-    {
-      "step": 1,
-      "included": [
+      "step_index": 0,
+      "tokens_used": 695,
+      "token_budget": 3500,
+      "context_included": [
         "system_prompt",
         "user_message",
-        "history_3",
-        "history_2",
-        "history_1",
-        "history_0"
+        "history_0_user",
+        "history_1_assistant",
+        "history_4_user",
+        "history_5_assistant",
+        "history_2_user",
+        "history_3_assistant"
       ],
-      "evicted": [],
-      "total_tokens": 595,
-      "budget": 4096
+      "context_evicted": [],
+      "context_decisions": [
+        {
+          "reason": "Deprioritized history_2_user: contains off-topic content (noise pattern detected)",
+          "block": "history_2_user"
+        },
+        {
+          "reason": "Deprioritized history_3_assistant: contains off-topic content (noise pattern detected)",
+          "block": "history_3_assistant"
+        }
+      ],
+      "action": {
+        "type": "tool_call",
+        "tool": "get_user_profile",
+        "arguments": {},
+        "result_summary": "Success: {\"user_id\":\"usr_8842\",\"name\":\"Priya Sharma\",\"goal_track\":\"data_science\",\"active_roadmap_id\":\"rdmp_9f2a\",\"roadmap_slug\":\"priya-ds-2026\",\"graduation_yea..."
+      }
     },
     {
-      "step": 2,
-      "included": [
+      "step_index": 1,
+      "tokens_used": 789,
+      "token_budget": 3500,
+      "context_included": [
         "system_prompt",
         "user_message",
-        "tool_result_1",
         "tool_result_0",
-        "history_3",
-        "history_2",
-        "history_1",
-        "history_0"
+        "tool_result_1",
+        "history_0_user",
+        "history_1_assistant",
+        "history_4_user",
+        "history_5_assistant",
+        "history_2_user",
+        "history_3_assistant"
       ],
-      "evicted": [],
-      "total_tokens": 689,
-      "budget": 4096
+      "context_evicted": [],
+      "context_decisions": [
+        {
+          "reason": "Deprioritized history_2_user: contains off-topic content (noise pattern detected)",
+          "block": "history_2_user"
+        },
+        {
+          "reason": "Deprioritized history_3_assistant: contains off-topic content (noise pattern detected)",
+          "block": "history_3_assistant"
+        }
+      ],
+      "action": {
+        "type": "tool_call",
+        "tool": "get_roadmap",
+        "arguments": {
+          "roadmap_id": "rdmp_9f2a"
+        },
+        "result_summary": "Success: {\"id\":\"rdmp_9f2a\",\"slug\":\"priya-ds-2026\",\"title\":\"6-month Data Science Path\",\"months\":[{\"month\":1,\"title\":\"Python & data basics\",\"activities\":[\"python..."
+      }
     },
     {
-      "step": 3,
-      "included": [
+      "step_index": 2,
+      "tokens_used": 949,
+      "token_budget": 3500,
+      "context_included": [
         "system_prompt",
         "user_message",
-        "tool_result_3",
+        "tool_result_0",
+        "tool_result_1",
         "tool_result_2",
-        "tool_result_1",
-        "tool_result_0",
-        "history_3",
-        "history_2",
-        "history_1",
-        "history_0"
+        "tool_result_3",
+        "history_0_user",
+        "history_1_assistant",
+        "history_4_user",
+        "history_5_assistant",
+        "history_2_user",
+        "history_3_assistant"
       ],
-      "evicted": [],
-      "total_tokens": 1238,
-      "budget": 4096
+      "context_evicted": [],
+      "context_decisions": [
+        {
+          "reason": "Compacted tool_result_3: roadmap JSON summarized to save tokens",
+          "block": "tool_result_3"
+        },
+        {
+          "reason": "Deprioritized history_2_user: contains off-topic content (noise pattern detected)",
+          "block": "history_2_user"
+        },
+        {
+          "reason": "Deprioritized history_3_assistant: contains off-topic content (noise pattern detected)",
+          "block": "history_3_assistant"
+        }
+      ],
+      "action": {
+        "type": "tool_call",
+        "tool": "search_kb",
+        "arguments": {
+          "query": "mlops month 4"
+        },
+        "result_summary": "Success: [{\"id\":\"mlops_month4\",\"keywords\":[\"mlops\",\"month 4\",\"deployment\",\"mlflow\"],\"estimated_tokens\":120,\"text\":\"MLOps for month 4: experiment tracking with ..."
+      }
     },
     {
-      "step": 4,
-      "included": [
+      "step_index": 3,
+      "tokens_used": 1094,
+      "token_budget": 3500,
+      "context_included": [
         "system_prompt",
         "user_message",
-        "tool_result_5",
+        "tool_result_0",
+        "tool_result_1",
+        "tool_result_2",
+        "tool_result_3",
         "tool_result_4",
-        "tool_result_3",
-        "tool_result_2",
-        "tool_result_1",
-        "tool_result_0",
-        "history_3",
-        "history_2",
-        "history_1",
-        "history_0"
+        "tool_result_5",
+        "history_0_user",
+        "history_1_assistant",
+        "history_4_user",
+        "history_5_assistant",
+        "history_2_user",
+        "history_3_assistant"
       ],
-      "evicted": [],
-      "total_tokens": 1825,
-      "budget": 4096
+      "context_evicted": [],
+      "context_decisions": [
+        {
+          "reason": "Compacted tool_result_3: roadmap JSON summarized to save tokens",
+          "block": "tool_result_3"
+        },
+        {
+          "reason": "Deprioritized history_2_user: contains off-topic content (noise pattern detected)",
+          "block": "history_2_user"
+        },
+        {
+          "reason": "Deprioritized history_3_assistant: contains off-topic content (noise pattern detected)",
+          "block": "history_3_assistant"
+        }
+      ],
+      "action": {
+        "type": "tool_call",
+        "tool": "update_roadmap_month",
+        "arguments": {
+          "roadmap_id": "rdmp_9f2a",
+          "month": 4,
+          "title": "Model tuning & ensembles",
+          "activities": [
+            "Experiment tracking with MLflow",
+            "Model registry basics",
+            "CI for training pipelines",
+            "Deploy to staging"
+          ],
+          "confirmed": true
+        },
+        "result_summary": "Success: {\"message\":\"Month 4 updated successfully\",\"updated_month\":{\"month\":4,\"title\":\"Model tuning & ensembles\",\"activities\":[\"Experiment tracking with MLflow..."
+      }
     },
     {
-      "step": 5,
-      "included": [
+      "step_index": 4,
+      "tokens_used": 1222,
+      "token_budget": 3500,
+      "context_included": [
         "system_prompt",
         "user_message",
-        "tool_result_7",
+        "tool_result_0",
+        "tool_result_1",
+        "tool_result_2",
+        "tool_result_3",
+        "tool_result_4",
+        "tool_result_5",
         "tool_result_6",
-        "tool_result_5",
-        "tool_result_4",
-        "tool_result_3",
-        "tool_result_2",
-        "tool_result_1",
-        "tool_result_0",
-        "history_3",
-        "history_2",
-        "history_1",
-        "history_0"
+        "tool_result_7",
+        "history_0_user",
+        "history_1_assistant",
+        "history_4_user",
+        "history_5_assistant",
+        "history_2_user",
+        "history_3_assistant"
       ],
-      "evicted": [],
-      "total_tokens": 1979,
-      "budget": 4096
+      "context_evicted": [],
+      "context_decisions": [
+        {
+          "reason": "Compacted tool_result_3: roadmap JSON summarized to save tokens",
+          "block": "tool_result_3"
+        },
+        {
+          "reason": "Deprioritized history_2_user: contains off-topic content (noise pattern detected)",
+          "block": "history_2_user"
+        },
+        {
+          "reason": "Deprioritized history_3_assistant: contains off-topic content (noise pattern detected)",
+          "block": "history_3_assistant"
+        }
+      ],
+      "action": {
+        "type": "finish",
+        "tool": "finish",
+        "arguments": {
+          "message": "MLOps added to month 4 of your data science roadmap and saved. The updated activities include: Experiment tracking with MLflow, Model registry basics, CI for training pipelines, and Deploy to staging. The roadmap slug is priya-ds-2026."
+        },
+        "result_summary": "Finished: MLOps added to month 4 of your data science roadmap and saved. The updated activities include: Exper"
+      }
     }
   ],
   "provider": "openrouter",

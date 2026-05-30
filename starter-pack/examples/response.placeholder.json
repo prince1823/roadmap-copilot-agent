@@ -1,0 +1,11 @@
+{
+  "_comment": "Replace with your real examples/response.json from a live POST /ai/roadmap-copilot/run. Delete this file when submitting.",
+  "success": true,
+  "final_message": "Updated month 4 with MLOps and saved roadmap priya-ds-2026.",
+  "roadmap_updated": true,
+  "slug": "priya-ds-2026",
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "steps": [],
+  "context_trace": []
+}

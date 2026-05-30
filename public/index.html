@@ -462,16 +462,16 @@
           <button onclick="resetChat()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;color:var(--text-dim);cursor:pointer;font-size:12px;">Reset</button>
         </div>
         <div class="chat-messages" id="chatMessages">
-          <div class="msg system">Ask the copilot to view or update your MLOps roadmap. Try: "Update month 3 with better CI/CD goals and save it."</div>
+          <div class="msg system">Ask the copilot to update your data science roadmap. Try: "Add MLOps to month 4 of my data science roadmap and save it."</div>
         </div>
         <div class="settings">
           <div class="setting">
             <label>Token Budget</label>
-            <input type="number" id="tokenBudget" value="4096" min="256" />
+            <input type="number" id="tokenBudget" value="3500" min="256" />
           </div>
           <div class="setting">
             <label>Max Steps</label>
-            <input type="number" id="maxSteps" value="10" min="1" max="20" />
+            <input type="number" id="maxSteps" value="8" min="1" max="20" />
           </div>
         </div>
         <div class="chat-input-area">
@@ -557,13 +557,14 @@
       steps.forEach((s) => {
         const item = document.createElement('div');
         item.className = 'step-item';
-        const toolName = s.tool || s.action;
-        const badge = s.tool ? `<span class="tool-badge">${s.tool}</span>` : '';
+        const action = s.action || {};
+        const toolName = action.tool || action.type || 'unknown';
+        const badge = action.tool ? `<span class="tool-badge">${action.tool}</span>` : '';
         item.innerHTML = `
-          <div class="step-num">${s.step}</div>
+          <div class="step-num">${s.step_index !== undefined ? s.step_index : s.step}</div>
           <div class="step-info">
-            <div class="step-tool">${s.action} ${badge}</div>
-            <div class="step-summary">${s.result_summary || ''}</div>
+            <div class="step-tool">${action.type || 'action'} ${badge}</div>
+            <div class="step-summary">${action.result_summary || ''}</div>
           </div>
         `;
         stepsList.appendChild(item);
@@ -620,10 +621,11 @@
 
         const data = await res.json();
 
-        if (data.final_message) {
-          addMessage('assistant', data.final_message);
+        const msg = data.final_message || data.final_answer;
+        if (msg) {
+          addMessage('assistant', msg);
           sessionHistory.push({ role: 'user', content: text });
-          sessionHistory.push({ role: 'assistant', content: data.final_message });
+          sessionHistory.push({ role: 'assistant', content: msg });
         } else if (data.error) {
           addMessage('error', `Error: ${data.error}`);
         }

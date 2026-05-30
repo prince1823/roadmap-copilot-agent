@@ -1,0 +1,31 @@
+{
+  "user_message": "Add MLOps to month 4 of my data science roadmap and save it.",
+  "token_budget_per_model_call": 3500,
+  "max_steps": 8,
+  "session_history": [
+    {
+      "role": "user",
+      "content": "Help me build a data science roadmap."
+    },
+    {
+      "role": "assistant",
+      "content": "I'll use your profile and create a six-month plan."
+    },
+    {
+      "role": "user",
+      "content": "What is transfer learning?"
+    },
+    {
+      "role": "assistant",
+      "content": "Transfer learning is a machine learning technique where a model developed for one task is reused as the starting point for a model on a second task. (Long off-topic tutorial — should be evicted or compressed by your context policy.)"
+    },
+    {
+      "role": "user",
+      "content": "Show me month 3 topics."
+    },
+    {
+      "role": "assistant",
+      "content": "Month 3 covers regression, classification, and model evaluation."
+    }
+  ]
+}
