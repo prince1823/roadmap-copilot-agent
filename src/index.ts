@@ -1,11 +1,18 @@
 import "dotenv/config";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import roadmapCopilotRouter from "./routes/roadmapCopilot.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.use(express.json({ limit: "1mb" }));
+
+// Serve UI
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Health check
 app.get("/health", (_req, res) => {
